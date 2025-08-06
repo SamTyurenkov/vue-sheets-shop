@@ -1,0 +1,5 @@
+env:
+  - variable: VITE_GOOGLE_DRIVE_API_KEY
+    value: AIzaSyBsTdd3EvDDEJNYiSRgjnGZ-S6G2G6kJII
+    availability:
+      - RUNTIME
