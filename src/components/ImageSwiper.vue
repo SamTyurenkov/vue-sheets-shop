@@ -125,12 +125,8 @@ function onImageLoad(event) {
         img.style.objectFit = 'contain'
     }
     
-    // Update swiper after image loads
-    nextTick(() => {
-        if (swiperRef.value) {
-            swiperRef.value.update()
-        }
-    })
+    // Swiper Web Component handles updates automatically
+    // No need to manually call update() for Web Components
 }
 
 // Handle image error
@@ -161,21 +157,14 @@ watch(() => props.images, (newImages) => {
             }
         })
         
-        nextTick(() => {
-            if (swiperRef.value) {
-                swiperRef.value.update()
-            }
-        })
+        // Swiper Web Component handles updates automatically
+        // No need to manually call update() for Web Components
     }
 }, { deep: true })
 
 onMounted(() => {
-    // Ensure swiper is properly initialized
-    nextTick(() => {
-        if (swiperRef.value && props.images.length > 0) {
-            swiperRef.value.update()
-        }
-    })
+    // Swiper Web Component initializes automatically
+    // No need to manually call update() for Web Components
 })
 </script>
 
