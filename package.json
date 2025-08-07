@@ -14,7 +14,7 @@
     "firebase": "^12.0.0",
     "jsonwebtoken": "^9.0.2",
     "pinia": "^2.3.1",
-    "swiper": "^11.2.5",
+    "swiper": "^11.2.10",
     "tailwind-scrollbar-hide": "^1.1.7",
     "vite-plugin-static-copy": "^2.3.0",
     "vue": "^3.5.13",

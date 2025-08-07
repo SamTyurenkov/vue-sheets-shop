@@ -5,12 +5,19 @@ module.exports = {
     "./src/**/*.{vue,js,ts,jsx,tsx}",
   ],
   theme: {
+    // screens: {
+    //   'sm': '640px',
+    //   'md': '700px',
+    //   'lg': '1024px',
+    //   'xl': '1280px',
+    //   '2xl': '1536px',
+    // },
     extend: {
       // fontFamily: {
       //   "poppins": "poppins"
       // }
       fontFamily: {
-        custom: ['CustomFont', 'sans-serif'], // Match this with the font-family name in @font-face
+        custom: ['Lato', 'sans-serif'], // Match this with the font-family name in @font-face
       },
     },
   },

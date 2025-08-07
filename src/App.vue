@@ -10,7 +10,7 @@ onUnmounted(() => {
 });
 </script>
 <template>
-  <main class="max-h-screen max-w-full overflow-hidden h-[100vh] w-full">
+  <main class="max-w-full overflow-hidden w-full">
     <router-view />
   </main>
 </template>

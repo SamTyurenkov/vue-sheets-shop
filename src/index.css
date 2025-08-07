@@ -4,28 +4,25 @@
 
 /* Define @font-face rules for your local .otf fonts */
 @font-face {
-    font-family: 'CustomFont';
-    src: url('@/assets/fonts/Neo Sans Std Regular.otf') format('opentype');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'CustomFont';
-    src: url('@/assets/fonts/Neo Sans Std Bold.otf') format('opentype');
-    font-weight: bold;
-    font-style: normal;
+	font-family: "Lato";
+	font-style: normal;
+	font-weight: normal;
+	src: local("Lato"),
+		url("@/assets/fonts/Lato-Regular.woff2") format(woff2),
+		url("@/assets/fonts/Lato-Regular.woff") format(woff),
+		url("@/assets/fonts/Lato-Regular.ttf");
+	font-display: swap;
 }
 
 @layer base {
     html {
-        @apply h-[100vh] w-full overflow-hidden max-h-screen max-w-full
+        @apply w-full max-w-full
     }
     body {
-        @apply font-custom bg-white overflow-hidden max-h-screen max-w-full h-[100vh] w-full text-gray-900
+        @apply font-custom bg-white max-w-full w-full text-gray-900
     }
     #app {
-        @apply overflow-hidden max-h-screen max-w-full h-[100vh] w-full
+        @apply max-w-full w-full
     }
 
     /* Global Typography Styles */
@@ -133,5 +130,34 @@
 @layer components {
     .grid-layout {
         @apply grid place-items-center items-center
+    }
+    
+    .image-swiper {
+        @apply w-full max-w-full;
+        overflow: hidden !important;
+    }
+    
+    .swiper-slide {
+        @apply w-full max-w-full;
+    }
+    
+    /* Fix swiper navigation and pagination overflow */
+    .swiper-button-next,
+    .swiper-button-prev {
+        @apply relative;
+    }
+    
+    .swiper-pagination {
+        @apply relative;
+    }
+    
+    /* Ensure swiper container doesn't overflow */
+    swiper-container {
+        @apply w-full max-w-full;
+        overflow: hidden !important;
+    }
+    
+    swiper-slide {
+        @apply w-full max-w-full;
     }
 }

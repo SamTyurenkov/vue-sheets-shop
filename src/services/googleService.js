@@ -105,28 +105,6 @@ class GoogleService {
       throw error
     }
   }
-
-  // Test if the API key is valid
-  async testApiKey() {
-    try {
-      if (!this.apiKey) {
-        return { valid: false, error: 'No API key provided' }
-      }
-
-      // Try to fetch a non-existent file to test the authentication
-      const url = `${this.baseUrl}/files/test?key=${this.apiKey}`
-      const response = await fetch(url)
-      
-      // If we get a 400 or 403, the authentication is invalid
-      if (response.status === 400 || response.status === 403) {
-        return { valid: false, error: 'Invalid API key' }
-      }
-      
-      return { valid: true }
-    } catch (error) {
-      return { valid: false, error: error.message }
-    }
-  }
 }
 
 export default GoogleService 
