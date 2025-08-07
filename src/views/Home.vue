@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import GoogleService from '../services/googleService.js'
 import { config } from '../config/env.js'
 import { isValidDriveFolderUrl } from '../utils/driveUtils.js'
@@ -104,11 +104,18 @@ async function fetchImagesForItem(itemIndex, driveFolderUrl) {
 
     // Preload first few images for better performance
     const imagesToPreload = images.slice(0, 3) // Preload first 3 images
-    for (const image of imagesToPreload) {
+    const preloadPromises = imagesToPreload.map(image => {
       if (image.id) {
-        fetchImageAsBlob(image.id)
+        return fetchImageAsBlob(image.id)
       }
-    }
+      return Promise.resolve()
+    })
+    
+    // Wait for preload to complete
+    await Promise.all(preloadPromises)
+    
+    // Ensure DOM is updated before continuing
+    await nextTick()
   } catch (error) {
     console.error(`Failed to fetch images for item ${itemIndex}:`, error)
     itemImages.value[itemIndex] = []
@@ -213,6 +220,7 @@ onMounted(async () => {
 
           <!-- Images -->
           <ImageSwiper v-else-if="itemImages[idx] && itemImages[idx].length > 0" class="w-full min-w-0"
+            :key="`swiper-${idx}-${itemImages[idx].length}`"
             :images="itemImages[idx]" :loading-images="loadingImages" @open-lightbox="handleSwiperLightbox" />
 
 
@@ -228,7 +236,7 @@ onMounted(async () => {
     <LightboxGallery :is-open="lightboxOpen" :images="lightboxImages" :initial-index="lightboxInitialIndex"
       @close="closeLightbox" />
 
-    <div class="fixed pointer-events-none bottom-3 start-0 w-full">
+    <div class="fixed pointer-events-none bottom-3 start-0 w-full z-10">
       <div class="max-w-4xl w-[100vw] mx-auto flex gap-3 *:block justify-end pe-3">
         <a class="bg-[#158a2e] pointer-events-auto rounded-full *:fill-white p-[6px] hover:bg-[#2dab48]"
           href="https://wa.me/+79819190599" rel="noindex nofollow noopener noreferrer" target="_blank">

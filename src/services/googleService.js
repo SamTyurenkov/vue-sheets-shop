@@ -6,9 +6,11 @@ class GoogleService {
     this.baseUrl = 'https://www.googleapis.com/drive/v3'
   }
 
-  // Get authorization headers (simplified for API key only)
+  // Get authorization headers with Bearer token
   getAuthHeaders() {
-    return {} // API key is passed as URL parameter
+    return {
+      'Authorization': `Bearer ${this.apiKey}`
+    }
   }
 
   // Google Sheets functionality
@@ -49,6 +51,11 @@ class GoogleService {
       let url = `${this.baseUrl}/files?q=${query}&fields=files(id,name,webContentLink,thumbnailLink,size)&orderBy=name&key=${this.apiKey}`
 
       const response = await fetch(url)
+      // let url = `${this.baseUrl}/files?q=${query}&fields=files(id,name,webContentLink,thumbnailLink,size)&orderBy=name`
+
+      // const response = await fetch(url, {
+      //   headers: this.getAuthHeaders()
+      // })
       
       if (!response.ok) {
         throw new Error(`Google Drive API error: ${response.status} ${response.statusText}`)
@@ -81,9 +88,11 @@ class GoogleService {
         throw new Error('Google Drive API key is required')
       }
 
-      let url = `${this.baseUrl}/files/${imageId}?fields=id,name,webContentLink,thumbnailLink,size&key=${this.apiKey}`
+      let url = `${this.baseUrl}/files/${imageId}?fields=id,name,webContentLink,thumbnailLink,size`
       
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: this.getAuthHeaders()
+      })
       
       if (!response.ok) {
         throw new Error(`Google Drive API error: ${response.status} ${response.statusText}`)

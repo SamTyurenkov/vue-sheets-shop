@@ -1,6 +1,6 @@
 <template>
     <div class="w-full min-w-0">
-        <swiper-container slides-per-view="1" space-between="10" :pagination="{ clickable: true, dynamicBullets: true }"
+        <swiper-container ref="swiperRef" slides-per-view="1" space-between="10" :pagination="{ clickable: true, dynamicBullets: true }"
             navigation="true" :loop="images.length > 1" @swiperprogress="onProgress" @swiperslidechange="onSlideChange"
             class="image-swiper w-full max-w-full">
             <swiper-slide v-for="image in images" :key="image.id" class="swiper-slide">
@@ -12,7 +12,8 @@
                     </div>
 
                     <img :src="getImageUrl(image)" :alt="image.name"
-                        class="w-full h-64 object-cover rounded border hover:shadow-lg transition-shadow cursor-pointer"
+                        class="w-full h-64 rounded hover:shadow-lg transition-shadow cursor-pointer"
+                        @load="onImageLoad" @error="onImageError"
                         @click="openLightbox(images, images.indexOf(image))" />
                 </div>
             </swiper-slide>
@@ -21,7 +22,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, nextTick, watch, ref, reactive } from 'vue'
 import 'swiper/css'
 import 'swiper/css/pagination'
 import 'swiper/css/navigation'
@@ -40,23 +41,103 @@ const props = defineProps({
 
 const emit = defineEmits(['openLightbox'])
 
-// Get the best available image URL with global cache support
+const swiperRef = ref(null)
+
+// Reactive object to store image URLs (thumbnail -> full image)
+const imageUrls = reactive({})
+
+// Get the best available image URL with thumbnail-first approach
 function getImageUrl(image) {
     if (!image) return ''
 
-    // Check global cache
+    // If we have a cached full image, use it
     const cachedUrl = imageCacheService.getCachedImage(image.id, 'high')
     if (cachedUrl) {
+        imageUrls[image.id] = cachedUrl
         return cachedUrl
     }
 
-    // Otherwise use thumbnail as fallback
-    return image.thumbnailLink || image.imageUrl
+    // If we have a stored full image URL, use it
+    if (imageUrls[image.id]) {
+        return imageUrls[image.id]
+    }
+
+    // Otherwise use thumbnail as fallback and start loading full image
+    const thumbnailUrl = image.thumbnailLink || image.imageUrl
+    if (thumbnailUrl && !imageUrls[image.id]) {
+        // Start loading full image in background
+        loadFullImage(image)
+    }
+    
+    return thumbnailUrl
+}
+
+// Load full image in background
+async function loadFullImage(image) {
+    try {
+        // Try to get full image from cache first
+        const cachedUrl = imageCacheService.getCachedImage(image.id, 'high')
+        if (cachedUrl) {
+            imageUrls[image.id] = cachedUrl
+            return
+        }
+
+        // If not cached, try to fetch it
+        if (image.imageUrl) {
+            const response = await fetch(image.imageUrl)
+            if (response.ok) {
+                const blob = await response.blob()
+                const blobUrl = URL.createObjectURL(blob)
+                
+                // Cache the image
+                await imageCacheService.cacheImage(image.id, blob, 'high')
+                
+                // Update the reactive URL
+                imageUrls[image.id] = blobUrl
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load full image:', error)
+    }
 }
 
 // Open lightbox
 function openLightbox(images, initialIndex = 0) {
     emit('openLightbox', images, initialIndex)
+}
+
+// Handle image load
+function onImageLoad(event) {
+    const img = event.target
+    
+    // Wait for natural dimensions to be available
+    if (img.naturalWidth && img.naturalHeight) {
+        // Fix orientation if needed
+        if (img.naturalWidth > img.naturalHeight) {
+            // Landscape image - use contain to show full image
+            img.style.objectFit = 'contain'
+        } else {
+            // Portrait image - use cover to fill the space better
+            img.style.objectFit = 'cover'
+        }
+    } else {
+        // Fallback to contain if dimensions not available
+        img.style.objectFit = 'contain'
+    }
+    
+    // Update swiper after image loads
+    nextTick(() => {
+        if (swiperRef.value) {
+            swiperRef.value.update()
+        }
+    })
+}
+
+// Handle image error
+function onImageError(event) {
+    const img = event.target
+    img.style.objectFit = 'cover'
+    console.error('Failed to load image:', img.src)
 }
 
 // Swiper event handlers
@@ -69,6 +150,33 @@ function onSlideChange(event) {
     const [swiper] = event.detail
     console.log('Slide changed to:', swiper.activeIndex)
 }
+
+// Watch for changes in images array and update swiper
+watch(() => props.images, (newImages) => {
+    if (newImages && newImages.length > 0) {
+        // Start loading full images for visible slides
+        newImages.forEach(image => {
+            if (image && !imageUrls[image.id]) {
+                loadFullImage(image)
+            }
+        })
+        
+        nextTick(() => {
+            if (swiperRef.value) {
+                swiperRef.value.update()
+            }
+        })
+    }
+}, { deep: true })
+
+onMounted(() => {
+    // Ensure swiper is properly initialized
+    nextTick(() => {
+        if (swiperRef.value && props.images.length > 0) {
+            swiperRef.value.update()
+        }
+    })
+})
 </script>
 
 <style>
