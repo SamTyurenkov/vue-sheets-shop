@@ -3,7 +3,7 @@
     @click="closeLightbox">
 
     <!-- Main image container -->
-    <div class="relative max-w-4xl max-h-full p-4 pb-40 sm:pb-20" @click.stop>
+    <div class="relative bottom-16 pointer-events-none" @click.stop>
       <!-- Loading indicator -->
       <div v-if="loadingImages[currentImage.id]"
         class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -11,11 +11,11 @@
       </div>
 
       <img :src="getImageUrl(currentImage)" :alt="currentImage.name"
-        class="max-w-full max-h-[70vh] sm:max-h-[80vh] object-contain" />
+        class="rounded object-contain pointer-events-auto" />
 
       <!-- Image counter -->
       <div v-if="images.length > 1"
-        class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
+        class="absolute top-16 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
         {{ currentIndex + 1 }} / {{ images.length }}
       </div>
     </div>
