@@ -174,11 +174,32 @@ function handleKeydown(event) {
   }
 }
 
+// Prevent body scroll when lightbox is open
+function preventBodyScroll() {
+  document.body.style.overflow = 'hidden'
+  document.body.style.position = 'fixed'
+  document.body.style.width = '100%'
+  document.body.style.top = `-${window.scrollY}px`
+}
+
+// Restore body scroll when lightbox closes
+function restoreBodyScroll() {
+  const scrollY = document.body.style.top
+  document.body.style.overflow = ''
+  document.body.style.position = ''
+  document.body.style.width = ''
+  document.body.style.top = ''
+  window.scrollTo(0, parseInt(scrollY || '0') * -1)
+}
+
 // Reset current index when lightbox opens
 watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
     currentIndex.value = props.initialIndex
     preloadImages()
+    preventBodyScroll()
+  } else {
+    restoreBodyScroll()
   }
 })
 
@@ -188,6 +209,10 @@ onUnmounted(() => {
     URL.revokeObjectURL(blobUrl)
   })
   document.removeEventListener('keydown', handleKeydown)
+  // Ensure body scroll is restored when component unmounts
+  if (props.isOpen) {
+    restoreBodyScroll()
+  }
 })
 
 // Add keyboard event listeners
