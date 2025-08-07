@@ -2,7 +2,7 @@
     <div class="w-full min-w-0">
         <swiper-container ref="swiperRef" slides-per-view="1" space-between="10" :pagination="{ clickable: true, dynamicBullets: true }"
             navigation="true" :loop="images.length > 1" @swiperprogress="onProgress" @swiperslidechange="onSlideChange"
-            class="image-swiper w-full max-w-full">
+            class="image-swiper w-full max-w-full rounded">
             <swiper-slide v-for="image in images" :key="image.id" class="swiper-slide">
                 <div class="relative group cursor-pointer w-full">
                     <!-- Loading state for individual image -->
@@ -12,7 +12,7 @@
                     </div>
 
                     <img :src="getImageUrl(image)" :alt="image.name"
-                        class="w-full h-64 rounded hover:shadow-lg transition-shadow cursor-pointer"
+                        class="w-full h-64 rounded hover:shadow-lg transition-shadow cursor-pointer !object-cover"
                         @load="onImageLoad" @error="onImageError"
                         @click="openLightbox(images, images.indexOf(image))" />
                 </div>
