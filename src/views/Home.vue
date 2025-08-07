@@ -24,9 +24,7 @@ const lightboxImages = ref([])
 const lightboxInitialIndex = ref(0)
 
 // Initialize Google service
-const googleService = new GoogleService(
-  config.GOOGLE_DRIVE_API_KEY
-)
+const googleService = new GoogleService()
 
 async function fetchSheetData() {
   loading.value = true

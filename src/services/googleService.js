@@ -124,7 +124,7 @@ class GoogleService {
   async fetchHighQualityImage(thumbnailLink) {
     try {
       // Replace the size parameter from s=220 to s=2048 for high quality
-      let highQualityUrl = thumbnailLink.replace(/s=\d+/, 's=2048')
+      let highQualityUrl = thumbnailLink.replace(/=s\d+/, '=s2048')
       console.log(`Fetching high-quality image: ${thumbnailLink} -> ${highQualityUrl}`)
       
       const response = await fetch(highQualityUrl)
