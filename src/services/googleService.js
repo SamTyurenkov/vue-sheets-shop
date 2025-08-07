@@ -1,15 +1,16 @@
 import { extractFolderId, createImageUrl, createThumbnailUrl, formatFileSize } from '../utils/driveUtils.js'
+import { config } from '../config/env.js'
 
 class GoogleService {
-  constructor(apiKey) {
-    this.apiKey = apiKey
+  constructor() {
+    this.apiKey = config.GOOGLE_DRIVE_API_KEY
     this.baseUrl = 'https://www.googleapis.com/drive/v3'
   }
 
-  // Get authorization headers with Bearer token
+  // Get authorization headers with API key
   getAuthHeaders() {
     return {
-      'Authorization': `Bearer ${this.apiKey}`
+      'x-goog-api-key': this.apiKey
     }
   }
 
@@ -48,14 +49,9 @@ class GoogleService {
 
       // Build the query for files in the folder that are images
       const query = encodeURIComponent(`'${folderId}' in parents and (mimeType contains 'image/')`)
-      let url = `${this.baseUrl}/files?q=${query}&fields=files(id,name,webContentLink,thumbnailLink,size)&orderBy=name&key=${this.apiKey}`
+      let url = `${this.baseUrl}/files?q=${query}&fields=files(id,name,thumbnailLink,size)&orderBy=name&key=${this.apiKey}`
 
       const response = await fetch(url)
-      // let url = `${this.baseUrl}/files?q=${query}&fields=files(id,name,webContentLink,thumbnailLink,size)&orderBy=name`
-
-      // const response = await fetch(url, {
-      //   headers: this.getAuthHeaders()
-      // })
       
       if (!response.ok) {
         throw new Error(`Google Drive API error: ${response.status} ${response.statusText}`)
@@ -68,12 +64,8 @@ class GoogleService {
       return data.files.map(file => ({
         id: file.id,
         name: file.name,
-        webContentLink: file.webContentLink,
         thumbnailLink: file.thumbnailLink || createThumbnailUrl(file.id),
-        size: file.size,
-        formattedSize: formatFileSize(file.size),
-        // Create direct image URL
-        imageUrl: createImageUrl(file.id)
+        size: file.size
       }))
     } catch (error) {
       console.error('Error fetching images from Google Drive:', error)
@@ -88,7 +80,7 @@ class GoogleService {
         throw new Error('Google Drive API key is required')
       }
 
-      let url = `${this.baseUrl}/files/${imageId}?fields=id,name,webContentLink,thumbnailLink,size`
+      let url = `${this.baseUrl}/files/${imageId}?fields=id,name,thumbnailLink,size`
       
       const response = await fetch(url, {
         headers: this.getAuthHeaders()
@@ -103,14 +95,46 @@ class GoogleService {
       return {
         id: file.id,
         name: file.name,
-        webContentLink: file.webContentLink,
         thumbnailLink: file.thumbnailLink || createThumbnailUrl(file.id),
         size: file.size,
-        formattedSize: formatFileSize(file.size),
-        imageUrl: createImageUrl(file.id)
       }
     } catch (error) {
       console.error('Error fetching image by ID:', error)
+      throw error
+    }
+  }
+
+  // Fetch thumbnail image
+  async fetchThumbnail(thumbnailLink) {
+    try {
+      const response = await fetch(thumbnailLink)
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch thumbnail: ${response.status} ${response.statusText}`)
+      }
+
+      return await response.blob()
+    } catch (error) {
+      console.error('Error fetching thumbnail:', error)
+      throw error
+    }
+  }
+
+  // Fetch high-quality image using thumbnail link modification
+  async fetchHighQualityImage(thumbnailLink) {
+    try {
+      // Replace the size parameter from s=220 to s=2048 for high quality
+      let highQualityUrl = thumbnailLink.replace(/s=\d+/, 's=2048')
+      console.log(`Fetching high-quality image: ${thumbnailLink} -> ${highQualityUrl}`)
+      
+      const response = await fetch(highQualityUrl)
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch high-quality image: ${response.status} ${response.statusText}`)
+      }
+      return await response.blob()
+    } catch (error) {
+      console.error('Error fetching high-quality image:', error)
       throw error
     }
   }

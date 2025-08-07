@@ -1,18 +1,27 @@
 <template>
     <div class="w-full min-w-0">
-        <swiper-container ref="swiperRef" slides-per-view="1" space-between="10" :pagination="{ clickable: true, dynamicBullets: true }"
-            navigation="true" :loop="images.length > 1" @swiperprogress="onProgress" @swiperslidechange="onSlideChange"
+        <swiper-container ref="swiperRef" slides-per-view="1" space-between="10"
+            :pagination="{ clickable: true, dynamicBullets: true }" navigation="true" :loop="images.length > 1"
+            @swiperprogress="onProgress" @swiperslidechange="onSlideChange"
             class="image-swiper w-full max-w-full rounded">
-            <swiper-slide v-for="image in images" :key="image.id" class="swiper-slide">
+            <swiper-slide v-for="(image, index) in images" :key="image.id" class="swiper-slide">
                 <div class="relative group cursor-pointer w-full">
                     <!-- Loading state for individual image -->
                     <div v-if="loadingImages[image.id]"
-                        class="absolute inset-0 flex items-center justify-center bg-gray-100 rounded">
+                        class="absolute inset-0 flex items-center justify-center bg-gray-100 rounded z-10">
                         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                     </div>
 
-                    <img :src="getImageUrl(image)" :alt="image.name"
+                    <!-- Thumbnail (always visible for fast render) -->
+                    <img :src="thumbnailUrls[image.id] || image.thumbnailLink || image.imageUrl" :alt="image.name"
+                        :fetchpriority="index === 0 ? 'high' : 'low'" :loading="index === 0 ? 'eager' : 'lazy'"
                         class="w-full h-64 rounded hover:shadow-lg transition-shadow cursor-pointer !object-cover"
+                        @click="openLightbox(images, images.indexOf(image))" />
+
+                    <!-- High quality image overlay (only for active slide) -->
+                    <img v-if="imageUrls[image.id] && isActiveSlide(image.id)" :src="imageUrls[image.id]"
+                        :alt="image.name"
+                        class="absolute inset-0 w-full h-64 rounded hover:shadow-lg transition-shadow cursor-pointer !object-cover duration-300 opacity-100 z-10"
                         @load="onImageLoad" @error="onImageError"
                         @click="openLightbox(images, images.indexOf(image))" />
                 </div>
@@ -46,63 +55,99 @@ const swiperRef = ref(null)
 
 // Reactive object to store image URLs (thumbnail -> full image)
 const imageUrls = reactive({})
+const thumbnailUrls = reactive({}) // Store thumbnail URLs
+const loadedFullImages = reactive({}) // Track which full images are loaded
+const activeSlideIndex = ref(0) // Track current active slide
 
-// Get the best available image URL with thumbnail-first approach
-function getImageUrl(image) {
-    if (!image) return ''
-
-    // If we have a cached full image, use it
-    const cachedUrl = imageCacheService.getCachedImage(image.id, 'high')
-    if (cachedUrl) {
-        imageUrls[image.id] = cachedUrl
-        return cachedUrl
-    }
-
-    // If we have a stored full image URL, use it
-    if (imageUrls[image.id]) {
-        return imageUrls[image.id]
-    }
-
-    // Otherwise use thumbnail as fallback and start loading full image
-    const thumbnailUrl = image.thumbnailLink || image.imageUrl
-    if (thumbnailUrl && !imageUrls[image.id]) {
-        // Start loading full image in background
-        loadFullImage(image)
-    }
-    
-    return thumbnailUrl
+// Check if an image is the active slide
+function isActiveSlide(imageId) {
+    if (!props.images || activeSlideIndex.value < 0 || activeSlideIndex.value >= props.images.length) return false
+    const activeImage = props.images[activeSlideIndex.value]
+    return activeImage && activeImage.id === imageId
 }
 
-// Load full image in background
+// Initialize thumbnail URLs for all images
+async function initializeThumbnails() {
+    if (!props.images) return
+
+    for (const image of props.images) {
+        if (image && image.id && !thumbnailUrls[image.id]) {
+            const thumbnailUrl = await imageCacheService.getOrFetchImage(image.id, 'thumbnail')
+            if (thumbnailUrl) {
+                thumbnailUrls[image.id] = thumbnailUrl
+                return thumbnailUrl
+            }
+        }
+    }
+}
+
+// Load full image in background with priority handling
 async function loadFullImage(image) {
     try {
+        console.log('Loading full image for:', image.id)
+
         // Try to get full image from cache first
         const cachedUrl = imageCacheService.getCachedImage(image.id, 'high')
         if (cachedUrl) {
+            console.log('Found cached full image for:', image.id)
             imageUrls[image.id] = cachedUrl
+            loadedFullImages[image.id] = true
             return
         }
 
-        // If not cached, use the same method as Home.vue for consistency
-        // This uses the Google Drive API with proper authentication
-        const blobUrl = await imageCacheService.getOrFetchImage(image.id, 'high', config.GOOGLE_DRIVE_API_KEY)
+        // If not cached, fetch it using the simplified API
+        console.log('Fetching full image for:', image.id)
+        const blobUrl = await imageCacheService.getOrFetchImage(image.id, 'high')
         if (blobUrl) {
+            console.log('Successfully loaded full image for:', image.id)
             imageUrls[image.id] = blobUrl
+            loadedFullImages[image.id] = true
+        } else {
+            console.log('Failed to load full image for:', image.id)
         }
     } catch (error) {
         console.error('Failed to load full image:', error)
     }
 }
 
+// Load images with priority - first image gets high priority, others are lazy loaded
+async function loadImagesWithPriority() {
+    if (!props.images || props.images.length === 0) return
+
+    // Only load thumbnails initially for fast rendering
+    // High quality images will be loaded when slides become active
+    console.log('Loading thumbnails for fast render')
+}
+
+// Load full image when slide becomes active
+async function loadImageForActiveSlide(activeIndex) {
+    if (!props.images || activeIndex < 0 || activeIndex >= props.images.length) return
+
+    const activeImage = props.images[activeIndex]
+    if (activeImage && !imageUrls[activeImage.id]) {
+        console.log('Loading high quality image for active slide:', activeImage.id)
+        await loadFullImage(activeImage)
+    }
+}
+
 // Open lightbox
-function openLightbox(images, initialIndex = 0) {
+async function openLightbox(images, initialIndex = 0) {
+    // Load high quality images for lightbox if not already loaded
+    const imagesToLoad = images.slice(Math.max(0, initialIndex - 1), initialIndex + 2) // Load current and adjacent images
+    for (const image of imagesToLoad) {
+        if (image && !imageUrls[image.id]) {
+            console.log('Loading high quality image for lightbox:', image.id)
+            await loadFullImage(image)
+        }
+    }
+
     emit('openLightbox', images, initialIndex)
 }
 
 // Handle image load
 function onImageLoad(event) {
     const img = event.target
-    
+
     // Wait for natural dimensions to be available
     if (img.naturalWidth && img.naturalHeight) {
         // Fix orientation if needed
@@ -117,7 +162,7 @@ function onImageLoad(event) {
         // Fallback to contain if dimensions not available
         img.style.objectFit = 'contain'
     }
-    
+
     // Swiper Web Component handles updates automatically
     // No need to manually call update() for Web Components
 }
@@ -138,24 +183,36 @@ function onProgress(event) {
 function onSlideChange(event) {
     const [swiper] = event.detail
     console.log('Slide changed to:', swiper.activeIndex)
+    activeSlideIndex.value = swiper.activeIndex // Update active slide index
+    // Load full image for the newly active slide
+    loadImageForActiveSlide(swiper.activeIndex)
 }
 
 // Watch for changes in images array and update swiper
-watch(() => props.images, (newImages) => {
+watch(() => props.images, async (newImages) => {
     if (newImages && newImages.length > 0) {
-        // Start loading full images for visible slides
-        newImages.forEach(image => {
-            if (image && !imageUrls[image.id]) {
-                loadFullImage(image)
-            }
-        })
-        
+        // Initialize thumbnails for all images for fast rendering
+        await initializeThumbnails()
+
+        // Only load thumbnails initially - high quality images loaded on demand
+        loadImagesWithPriority()
+
         // Swiper Web Component handles updates automatically
         // No need to manually call update() for Web Components
     }
 }, { deep: true })
 
-onMounted(() => {
+onMounted(async () => {
+    // Initialize thumbnails if images are already available
+    if (props.images && props.images.length > 0) {
+        await initializeThumbnails()
+    }
+
+    // Load images with priority if they're already available
+    if (props.images && props.images.length > 0) {
+        await loadImagesWithPriority()
+    }
+
     // Swiper Web Component initializes automatically
     // No need to manually call update() for Web Components
 })

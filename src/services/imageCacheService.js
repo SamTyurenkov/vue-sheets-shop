@@ -1,9 +1,25 @@
+import GoogleService from './googleService.js'
+
 class ImageCacheService {
   constructor() {
     this.memoryCache = new Map() // In-memory cache for current session
     this.cacheKey = 'polyana_image_cache'
     this.maxCacheSize = 50 * 1024 * 1024 // 50MB cache limit
     this.cacheExpiry = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+    this.googleService = null // Will be initialized
+  }
+
+  // Initialize googleService
+  initialize() {
+    this.googleService = new GoogleService() // No need to pass API key
+  }
+
+  // Get or initialize googleService
+  getGoogleService() {
+    if (!this.googleService) {
+      this.initialize()
+    }
+    return this.googleService
   }
 
   // Generate a unique cache key for an image
@@ -226,26 +242,37 @@ class ImageCacheService {
   }
 
   // Get image from cache or fetch if not cached
-  async getOrFetchImage(fileId, quality = 'high', apiKey) {
+  async getOrFetchImage(fileId, quality = 'high') {
+    // Get or initialize googleService
+    const googleService = this.getGoogleService()
+
     // Check cache first
     const cached = this.getCachedImage(fileId, quality)
     if (cached) {
       return cached
     }
 
-    // Fetch from API if not cached
-    if (apiKey) {
-      try {
-        const url = `https://www.googleapis.com/drive/v3/files/${fileId}?supportsTeamDrives=true&alt=media&key=${apiKey}`
-        const response = await fetch(url)
-        
-        if (response.ok) {
-          const blob = await response.blob()
-          return await this.cacheImage(fileId, blob, quality)
-        }
-      } catch (error) {
-        console.error('Failed to fetch image:', error)
+    // Fetch using googleService
+    try {
+      let blob = null
+
+      if (quality === 'thumbnail') {
+        // Get image metadata to get thumbnailLink
+        const imageData = await googleService.getImageById(fileId)
+        const thumbnailLink = imageData.thumbnailLink
+        blob = await googleService.fetchThumbnail(thumbnailLink)
+      } else if (quality === 'high') {
+        // Get image metadata to get thumbnailLink
+        const imageData = await googleService.getImageById(fileId)
+        const thumbnailLink = imageData.thumbnailLink
+        blob = await googleService.fetchHighQualityImage(thumbnailLink)
       }
+
+      if (blob) {
+        return await this.cacheImage(fileId, blob, quality)
+      }
+    } catch (error) {
+      console.error('Failed to fetch image:', error)
     }
 
     return null

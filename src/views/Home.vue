@@ -41,12 +41,8 @@ async function fetchSheetData() {
   }
 }
 
-// Fetch image using global cache service
+// Fetch image as blob with caching
 async function fetchImageAsBlob(fileId) {
-  if (imageBlobs.value[fileId]) {
-    return imageBlobs.value[fileId]
-  }
-
   if (loadingImages.value[fileId]) {
     return null // Already loading
   }
@@ -54,8 +50,7 @@ async function fetchImageAsBlob(fileId) {
   loadingImages.value[fileId] = true
 
   try {
-    // Use global cache service
-    const blobUrl = await imageCacheService.getOrFetchImage(fileId, 'high', config.GOOGLE_DRIVE_API_KEY)
+    const blobUrl = await imageCacheService.getOrFetchImage(fileId, 'high')
 
     if (blobUrl) {
       imageBlobs.value[fileId] = blobUrl
@@ -72,26 +67,6 @@ async function fetchImageAsBlob(fileId) {
   }
 }
 
-// Get the best available image URL with global cache support
-function getImageUrl(image) {
-  if (!image) return ''
-
-  // If we have a blob URL, use it
-  if (imageBlobs.value[image.id]) {
-    return imageBlobs.value[image.id]
-  }
-
-  // Check global cache
-  const cachedUrl = imageCacheService.getCachedImage(image.id, 'high')
-  if (cachedUrl) {
-    imageBlobs.value[image.id] = cachedUrl
-    return cachedUrl
-  }
-
-  // Otherwise use thumbnail as fallback
-  return image.thumbnailLink || image.imageUrl
-}
-
 // Fetch images for a specific item
 async function fetchImagesForItem(itemIndex, driveFolderUrl) {
   if (!driveFolderUrl || imagesLoading.value[itemIndex]) return
@@ -102,17 +77,12 @@ async function fetchImagesForItem(itemIndex, driveFolderUrl) {
     const images = await googleService.getImagesFromFolder(driveFolderUrl)
     itemImages.value[itemIndex] = images
 
-    // Preload first few images for better performance
-    const imagesToPreload = images.slice(0, 3) // Preload first 3 images
-    const preloadPromises = imagesToPreload.map(image => {
-      if (image.id) {
-        return fetchImageAsBlob(image.id)
-      }
-      return Promise.resolve()
-    })
+    // Preload only the first image with high priority
+    if (images.length > 0 && images[0] && images[0].id) {
+      await fetchImageAsBlob(images[0].id)
+    }
     
-    // Wait for preload to complete
-    await Promise.all(preloadPromises)
+    // Other images will be loaded when they become active in the swiper
     
     // Ensure DOM is updated before continuing
     await nextTick()
@@ -196,7 +166,7 @@ onMounted(async () => {
     <h1 class="text-2xl font-bold mb-4">Продаю в Красной Поляне</h1>
 
     <div class="grid gap-6 overflow-hidden">
-      <div v-for="(item, idx) in items" :key="idx" class="border-t flex flex-wrap gap-y-4 pt-4 max-w-full overflow-hidden">
+      <div v-for="(item, idx) in items" :key="idx" class="border-t flex flex-wrap gap-y-4 pt-6 max-w-full overflow-hidden">
 
         <div class="basis-full sm:basis-1/2 order-2 sm:order-1 sm:pe-4">
           <!-- Item Details -->
@@ -213,9 +183,9 @@ onMounted(async () => {
         <div class="basis-full sm:basis-1/2 order-1 sm:order-2 min-w-0" v-if="item[config.COLUMNS.DRIVE_FOLDER_LINK]">
           <!-- Images Section -->
           <!-- Loading State -->
-          <div v-if="imagesLoading[idx]" class="flex items-center justify-center py-4">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span class="ml-2">Загружаю картинки...</span>
+          <div v-if="imagesLoading[idx]" class="flex items-center justify-center h-64 bg-slate-600">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-100"></div>
+            <span class="ml-2 text-white">Загружаю картинки...</span>
           </div>
 
           <!-- Images -->

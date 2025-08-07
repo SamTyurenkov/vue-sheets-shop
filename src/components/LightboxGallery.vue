@@ -62,12 +62,8 @@ const currentImage = computed(() => {
   return props.images[currentIndex.value] || {}
 })
 
-// Fetch image using global cache service
+// Fetch image as blob with caching
 async function fetchImageAsBlob(fileId) {
-  if (imageBlobs.value[fileId]) {
-    return imageBlobs.value[fileId]
-  }
-
   if (loadingImages.value[fileId]) {
     return null // Already loading
   }
@@ -75,8 +71,7 @@ async function fetchImageAsBlob(fileId) {
   loadingImages.value[fileId] = true
 
   try {
-    // Use global cache service
-    const blobUrl = await imageCacheService.getOrFetchImage(fileId, 'high', config.GOOGLE_DRIVE_API_KEY)
+    const blobUrl = await imageCacheService.getOrFetchImage(fileId, 'high')
 
     if (blobUrl) {
       imageBlobs.value[fileId] = blobUrl
