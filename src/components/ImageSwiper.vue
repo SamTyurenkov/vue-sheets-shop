@@ -27,6 +27,7 @@ import 'swiper/css'
 import 'swiper/css/pagination'
 import 'swiper/css/navigation'
 import imageCacheService from '../services/imageCacheService.js'
+import { config } from '../config/env.js'
 
 const props = defineProps({
     images: {
@@ -82,19 +83,11 @@ async function loadFullImage(image) {
             return
         }
 
-        // If not cached, try to fetch it
-        if (image.imageUrl) {
-            const response = await fetch(image.imageUrl)
-            if (response.ok) {
-                const blob = await response.blob()
-                const blobUrl = URL.createObjectURL(blob)
-                
-                // Cache the image
-                await imageCacheService.cacheImage(image.id, blob, 'high')
-                
-                // Update the reactive URL
-                imageUrls[image.id] = blobUrl
-            }
+        // If not cached, use the same method as Home.vue for consistency
+        // This uses the Google Drive API with proper authentication
+        const blobUrl = await imageCacheService.getOrFetchImage(image.id, 'high', config.GOOGLE_DRIVE_API_KEY)
+        if (blobUrl) {
+            imageUrls[image.id] = blobUrl
         }
     } catch (error) {
         console.error('Failed to load full image:', error)
