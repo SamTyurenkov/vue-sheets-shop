@@ -205,7 +205,7 @@ onMounted(async () => {
     <LightboxGallery :is-open="lightboxOpen" :images="lightboxImages" :initial-index="lightboxInitialIndex"
       @close="closeLightbox" />
 
-    <div class="fixed pointer-events-none top-3 end-1 z-10">
+    <div class="fixed pointer-events-none top-3 end-1 z-10 lg:right-[calc(50%-28rem)]">
       <a class="bg-[#158a2e] block pointer-events-auto rounded-full *:fill-white p-[6px] hover:bg-[#2dab48] mb-4 border-2 border-white"
         href="https://wa.me/+79819190599" rel="noindex nofollow noopener noreferrer" target="_blank">
         <svg width="30" height="30" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
