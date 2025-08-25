@@ -15,7 +15,10 @@ QRCode.toString(websiteURL, { type: 'terminal' }, (err, qrCodeString) => {
 });
 
 // Generate the QR code as an image file (e.g., PNG)
-QRCode.toFile('./qrcode.png', websiteURL, { errorCorrectionLevel: 'H' }, (err) => {
+QRCode.toFile('./qrcode.png', websiteURL, { 
+  errorCorrectionLevel: 'H',
+  width: 900  // Increase width to make QR code bigger (default is 256)
+}, (err) => {
   if (err) {
     console.error('Error saving QR code image:', err);
     return;
